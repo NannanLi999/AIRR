@@ -332,9 +332,11 @@ encoder=Encoder(ngf=32, num_classes=NUM_CLASSES)
 encoder.to(device)
 if DATASET=='celebahq':
     generator=MyGenerator(ngf=32)
+    generator.to(device)
+    generator.init_generator()
 else:
     generator=Generator(ngf=32)
-generator.to(device)
+    generator.to(device)
 discriminator=Discriminator(ngf=32, num_classes=NUM_CLASSES)
 discriminator.to(device)
 

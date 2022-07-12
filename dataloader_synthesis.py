@@ -19,7 +19,7 @@ class Dataset(torch.utils.data.Dataset):
          self.transform=transforms.ToTensor()
 
          index=pickle.load(open(os.path.join(root,'index.pkl'),'rb'))
-         self.imgname_list=[x[0][0] for x in scio.loadmat(os.path.join(root,'Img/subset_index.mat'))['nameList']]
+         self.imgname_list=[x[0][0] for x in scio.loadmat(os.path.join(root,'FashionSynthesisBenchmark/Img/subset_index.mat'))['nameList']]
          self.n2n=pickle.load(open(os.path.join(root,'name2pairedname.pkl'),'rb'))
          
          if split=='train':
@@ -29,7 +29,7 @@ class Dataset(torch.utils.data.Dataset):
          elif split=='test':
             self.index=index[-2000:]           
                
-         self.img_root=os.path.join(root,'Img/')
+         self.img_root=os.path.join(root,'FashionSynthesisBenchmark/Img/')
          img_file=h5py.File(os.path.join(root,'G2.h5'),'r')
          self.img_data_minus_mean=img_file['ih']
          self.img_data_mean=np.array(img_file['ih_mean'])
@@ -40,7 +40,7 @@ class Dataset(torch.utils.data.Dataset):
          name2index={x:i for i,x in enumerate(self.imgname_list)}
         
          
-         anno_root=os.path.join(root,'Anno/')
+         anno_root=os.path.join(root,'FashionSynthesisBenchmark/Anno/')
          self.anno=scio.loadmat(os.path.join(anno_root,'language_original.mat'))
          self.attr_dict={}
          self.attr_choices=[]
