@@ -22,6 +22,8 @@ To train on CelebA-HQ, please clone [pSp](https://github.com/eladrich/pixel2styl
 ## Test
 Run `test.py`. This should generate all test images with the specified attribute under `save_dir`. Please specify `save_dir`, the dataset and the attribute that you would like to manipulate in `test.py`.
 
+To test on CelebA-HQ, please clone [pSp](https://github.com/eladrich/pixel2style2pixel) repository to the current directory. 
+
 ## To Do
 - [x] code release
 - [x] configure dataset
