@@ -10,7 +10,7 @@ import argparse
 import os
 
 #options: synthesis, attr, celeba, celebahq
-DATASET='celeba' 
+DATASET='celebahq' 
 
 #deepfashion synthesis
 if DATASET=='synthesis':
@@ -25,7 +25,7 @@ if DATASET=='synthesis':
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
 
-    save_dir='model/synthesis/'
+    save_dir='pretrain/synthesis/'
     classifier_path='classifier/model_synthesis.pth'
     NUM_CLASSES=[17,4]
     NUM_EPOCH=31
@@ -44,7 +44,7 @@ elif DATASET=='attr':
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
 
-    save_dir='model/attr/'
+    save_dir='pretrain/attr/'
     classifier_path='classifier/model_attr.pth'
     NUM_CLASSES=[7,3,3,4,6,3]
     NUM_EPOCH=51
@@ -63,7 +63,7 @@ elif DATASET=='celeba':
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
 
-    save_dir='model/celeba/'
+    save_dir='pretrain/celeba/'
     classifier_path='classifier/model_celeba.pth'
     NUM_CLASSES=[5,3,3,2,2,2,2,2]
     NUM_EPOCH=21
@@ -82,7 +82,7 @@ elif DATASET=='celebahq':
     parser.add_argument('--lr', '--learning rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.9, type=float, help='beta1 in Adam')
 
-    save_dir='/model/celebahq/'
+    save_dir='pretrain/celebahq/'
     NUM_CLASSES=[5,3,3,2,2,2,2,2]
     NUM_EPOCH=11
     batch_size=4
@@ -123,17 +123,22 @@ def test(device,encoder,generator,discriminator,dataloader,imgfolder='output/'):
       for ibatch,(imgs,attrs,imgname,paired_attrs,face_seg,paired_imgs,mask) in enumerate(dataloader):
          with torch.no_grad(): 
             mask=mask.to(device) 
-            z,_,_=encoder((imgs).to(device),paired_attrs.to(device),mask=mask)           
+            if DATASET=='celebahq':
+                z,_,_=encoder((paired_imgs).to(device),paired_attrs.to(device),mask=mask)           
+            else:
+                z,_,_=encoder((imgs).to(device),paired_attrs.to(device),mask=mask)            
             gen_x=generator(z)
             gen_x=gen_x*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device) 
             loss_dict['rec_loss']=MSELoss(gen_x,imgs.to(device))
             
          total_loss+=sum([v.mean() for v in loss_dict.values()])
-         if ibatch%50==0:
-            index=np.random.choice(np.arange(len(gen_x)),15)
-            for ii in index:
+         
+         index=np.random.choice(np.arange(len(gen_x)),15)
+         for ii in index:
               compare=np.concatenate((imgs[ii].cpu().numpy(),gen_x[ii].detach().cpu().numpy()),axis=2)
               save_img_from_torch(compare,imgname[ii],imgfolder=imgfolder)
+              
+         if ibatch%50==0:
             loss={k:v.cpu().detach().numpy() for k,v in loss_dict.items()}
             print('total loss=%.2f at img %d'%(total_loss/(ibatch+1),ibatch+1))
             for k,v in loss.items():             
@@ -152,36 +157,37 @@ def manipulate(device,encoder,generator,discriminator,dataloader,imgfolder='outp
             #specify the manipulated attribute here
             attrs[:,1]=0 
             mask=mask.to(device) 
-            z,_,_=encoder((imgs).to(device),attrs.to(device),mask=mask)           
+            if DATASET=='celebahq':
+                z,_,_=encoder((paired_imgs).to(device),attrs.to(device),mask=mask)           
+            else:
+                z,_,_=encoder((imgs).to(device),attrs.to(device),mask=mask)               
             gen_x=generator(z)
             gen_x=gen_x*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device) 
             loss_dict['rec_loss']=MSELoss(gen_x,imgs.to(device))
         
          total_loss+=sum([v.mean() for v in loss_dict.values()])
-         if ibatch%50==0:
-            index=np.arange(len(gen_x))
-            for ii in index:
+         index=np.arange(len(gen_x))
+         for ii in index:
               compare=np.concatenate((imgs[ii].cpu().numpy(),gen_x[ii].detach().cpu().numpy()),axis=2)
               save_img_from_torch(compare,imgnames[ii],imgfolder=imgfolder)
+         if ibatch%50==0:
             loss={k:v.cpu().detach().numpy() for k,v in loss_dict.items()}
             print('total loss=%.2f at img %d'%(total_loss/(ibatch+1),ibatch+1))
             for k,v in loss.items():             
                print('\t%s=%.2f'%(k,np.mean(v)))
             
      
-
-train_data=Dataset(split='train')
+#Please specify the manipulated category in the corresponding dataloader_*.py. Default is the first value in the first category.
 test_data=Dataset(split='test')
-val_data=Dataset(split='val')
-
-train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True) 
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False) 
-val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False) 
+test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False)  
 
 device = torch.device('cuda')
 encoder=Encoder(ngf=32, num_classes=NUM_CLASSES)
 encoder.to(device)
-generator=Generator(ngf=32)
+if DATASET=='celebahq':
+    generator=MyGenerator(ngf=32)
+else:
+    generator=Generator(ngf=32)
 generator.to(device)
 discriminator=Discriminator(ngf=32, num_classes=NUM_CLASSES)
 discriminator.to(device)
@@ -205,10 +211,13 @@ if os.path.exists(model_path):
     optimizerG.load_state_dict(checkpoint['generator_optimizer_state_dict'])  
     start_epoch=checkpoint['epoch']+1
     batch_size=checkpoint['batch_size']
-    test(device,encoder,generator,discriminator,val_dataloader,imgfolder=save_dir)
+    test(device,encoder,generator,discriminator,test_dataloader,imgfolder=save_dir)
+    
+else:
+    print('Model path does not exist!')
     
 if os.path.exists(model_path):  
-   manipulate(device,encoder,generator,discriminator,val_dataloader,imgfolder='manip/')
+   manipulate(device,encoder,generator,discriminator,test_dataloader,imgfolder='manip/')
 
 
       

@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt
 LABEL=['Background', 'Hat', 'Hair', 'Glove', 'Sunglasses', 'Upper-clothes', 'Dress', 'Coat','Socks', 'Pants', 'Jumpsuits', 'Scarf', 'Skirt', 'Face', 'Left-arm', 'Right-arm','Left-leg', 'Right-leg', 'Left-shoe', 'Right-shoe']
 
 class Dataset(torch.utils.data.Dataset):#net/ivcfs4/mnt/data
-    def __init__(self,root='/projectnb/ivc-ml//nnli/data/attrdataset/',split='train',cat=0):
+    def __init__(self,root='data/attr/',split='train',cat=0):
          # cat is the category index that you want to manipulate. 
-        
+         # options for cat: 0,1,2,3,4,5 
          self.root=root
          self.num_classes=[7,3,3,4,6,3]
          
@@ -25,13 +25,13 @@ class Dataset(torch.utils.data.Dataset):#net/ivcfs4/mnt/data
 
          self.transform=transforms.ToTensor()
          
-         self.img_dir=root+'img_resampled/'
-         self.seg_dir=root+'seg/'
+         self.img_dir=os.path.join(root,'img_resampled/')
+         self.seg_dir=os.path.join(root,'seg/')
                 
          self.imgname_list=sorted([x for x in os.listdir(self.img_dir)])
-         self.n2n=pickle.load(open('data/attr/name2pairedname_train.pkl','rb'))
+         self.n2n=pickle.load(open(os.path.join(root,'name2pairedname_train.pkl'),'rb'))
        
-         index=pickle.load(open('data/attr/index.pkl','rb'))
+         index=pickle.load(open(os.path.join(root,'index.pkl'),'rb'))
          self.split=split
          if split=='train':
             self.index=index[:-2000]           
@@ -39,12 +39,12 @@ class Dataset(torch.utils.data.Dataset):#net/ivcfs4/mnt/data
             self.index=index[-2000:-1000] 
          elif split=='test':
             self.index=index[-1000:]
-            self.n2n_test=pickle.load(open('data/attr/name2pairedname_test.pkl','rb'))
+            self.n2n_test=pickle.load(open(os.path.join(root,'name2pairedname_test.pkl'),'rb'))
             self.cat=cat
             self.index=[x for x in index[-1000:] if len(self.n2n_test[self.imgname_list[x]][self.cat])>0]
             
         
-         self.attr_dict=pickle.load(open(root+'name2attr.pkl','rb'))
+         self.attr_dict=pickle.load(open(os.path.join(root,'name2attr.pkl'),'rb'))
          self.attr_str=['floral','graphic','striped','embroidered','pleated','solid','lattice','long_sleeve','short_sleeve','sleeveless','maxi_length','mini_length','no_dress','crew_neckline','v_neckline','square_neckline','no_neckline','denim','chiffon','cotton','leather','faux','knit','tight','loose','conventional']
          
     def __len__(self):

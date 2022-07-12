@@ -13,20 +13,21 @@ import matplotlib.pyplot as plt
 
 
 class Dataset(torch.utils.data.Dataset):#/net/ivcfs4/mnt/data
-    def __init__(self,root='/projectnb/ivc-ml/nnli/data/Celeba/',split='train',cat=0):
+    def __init__(self,root='data/celeba/',split='train',cat=0):
           # cat is the category index that you want to manipulate. cat=-1 means random category and is used in training.
+          #options for cat: 0,1,2,3,4,5,6,7
          self.root=root
          self.num_classes=[5,3,3,2,2,2,2,2]
          
          self.transform=transforms.Compose([transforms.CenterCrop(size=178),transforms.Resize(128),transforms.ToTensor()])
          
-         self.img_dir=root+'img_align_celeba/img_align_celeba/'
-         self.seg_dir=root+'seg/'
+         self.img_dir=os.path.join(root,'img_align_celeba/img_align_celeba/')
+         self.seg_dir=os.path.join(root,'seg/')
                 
          self.imgname_list=sorted([x for x in os.listdir(self.img_dir)])
-         self.n2n=pickle.load(open('data/celeba/name2pairedname.pkl','rb'))
+         self.n2n=pickle.load(open(os.path.join(root,'name2pairedname.pkl'),'rb'))
        
-         index=pickle.load(open('data/celeba/index.pkl','rb'))
+         index=pickle.load(open(os.path.join(root,'index.pkl'),'rb'))
          self.split=split
          if split=='train':
             self.index=index[:-2000]           
@@ -38,7 +39,7 @@ class Dataset(torch.utils.data.Dataset):#/net/ivcfs4/mnt/data
             self.index=[x for x in index[-2000:] if len(self.n2n[self.imgname_list[x]][self.cat])>0]
             
         
-         self.attr_dict=pickle.load(open('data/celeba/name2attr.pkl','rb'))
+         self.attr_dict=pickle.load(open(os.path.join(root,'name2attr.pkl'),'rb'))
 
     def __len__(self):
         return len(self.index)

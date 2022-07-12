@@ -11,21 +11,23 @@ from PIL import Image
 from torchvision import transforms, utils
 
 class Dataset(data.Dataset):
-    def __init__(self, root='/net/ivcfs4/mnt/data/nnli/CelebAMask-HQ/', split='train',cat='Smiling'):
+    def __init__(self, root='data/celebahq/', split='train',cat='Smiling'):
         # cat is the category index that you want to manipulate. 
+        # options for cat: 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair','Bald','Mustache', 'No_Beard', 'Sideburns','Bald_hair_type', 'Straight_Hair', 'Wavy_Hair','No Smiling','Smiling'],
+        #                  'No Eyeglasses','Eyeglasses','No Male','Male','No Wearing_Hat','Wearing_Hat','Old','Young'
         self.root=root
         self.split=split
-        self.img_dir=root+'CelebA-HQ-img'
+        self.img_dir=os.path.join(root,'CelebAMask-HQ/CelebA-HQ-img')
         self.transform=transforms.ToTensor()
         
         if cat=='Bald_hair_type':
             cat='Bald'
         
-        latent_dir='data/celebahq/celebahq_dlatents_psp.npy'
+        latent_dir=os.path.join(root,'celebahq_dlatents_psp.npy')
         dlatents = np.load(latent_dir)
-        self.n2n=pickle.load(open('data/celebahq/name2pairedname.pkl','rb'))
+        self.n2n=pickle.load(open(os.path.join(root,'name2pairedname.pkl'),'rb'))
         if split=='test':
-           self.n2n=pickle.load(open('data/celebahq/name2pairedname_test.pkl','rb'))
+           self.n2n=pickle.load(open(os.path.join(root,'name2pairedname_test.pkl'),'rb'))
         
         train_len = 29000
         self.dlatents = dlatents
@@ -37,7 +39,7 @@ class Dataset(data.Dataset):
             self.index=[x for x in range(train_len,len(dlatents))]
 
         self.length = len(self.index)
-        self.attr_dict=pickle.load(open('data/celebahq/name2attr.pkl','rb'))
+        self.attr_dict=pickle.load(open(os.path.join(root,'name2attr.pkl'),'rb'))
            
         self.cat=cat
         
@@ -61,4 +63,4 @@ class Dataset(data.Dataset):
         paired_attr=self.attr_dict[paired_name]
         paired_attr=torch.as_tensor(paired_attr,dtype=torch.long)
                
-        return dlatent,attr,name,paired_attr,torch.zeros_like(img), img, torch.zeros_like(img)
+        return img,attr,name+'.png',paired_attr,torch.zeros_like(img), dlatent, torch.zeros_like(img)

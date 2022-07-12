@@ -10,7 +10,7 @@ import argparse
 import os
 
 #options: synthesis, attr, celeba, celebahq
-DATASET='celeba' 
+DATASET='celebahq' 
 
 #deepfashion synthesis
 if DATASET=='synthesis':
@@ -24,8 +24,9 @@ if DATASET=='synthesis':
     parser.add_argument('--l4', '--lambda4', default=1.0, type=float, help='lambda for perceptual loss')
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
+    parser.add_argument('--resume_training', '--resume_training', default=False, type=bool, help='use pretrained model or not')
 
-    save_dir='model/synthesis/'
+    save_dir='pretrain/synthesis/'
     classifier_path='classifier/model_synthesis.pth'
     NUM_CLASSES=[17,4]
     NUM_EPOCH=31
@@ -43,8 +44,9 @@ elif DATASET=='attr':
     parser.add_argument('--l4', '--lambda4', default=1.0, type=float, help='lambda for perceptual loss')
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
+    parser.add_argument('--resume_training', '--resume_training', default=False, type=bool, help='use pretrained model or not')
 
-    save_dir='model/attr/'
+    save_dir='pretrain/attr/'
     classifier_path='classifier/model_attr.pth'
     NUM_CLASSES=[7,3,3,4,6,3]
     NUM_EPOCH=51
@@ -62,8 +64,9 @@ elif DATASET=='celeba':
     parser.add_argument('--l4', '--lambda4', default=1.0, type=float, help='lambda for perceptual loss')
     parser.add_argument('--lr', '--learning rate', default=1e-4, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.5, type=float, help='beta1 in Adam')
+    parser.add_argument('--resume_training', '--resume_training', default=False, type=bool, help='use pretrained model or not')
 
-    save_dir='model/celeba/'
+    save_dir='pretrain/celeba/'
     classifier_path='classifier/model_celeba.pth'
     NUM_CLASSES=[5,3,3,2,2,2,2,2]
     NUM_EPOCH=21
@@ -81,8 +84,9 @@ elif DATASET=='celebahq':
     parser.add_argument('--l4', '--lambda4', default=10.0, type=float, help='lambda for perceptual loss')
     parser.add_argument('--lr', '--learning rate', default=1e-3, type=float, help='learning rate')
     parser.add_argument('--beta1', '--beta1', default=0.9, type=float, help='beta1 in Adam')
+    parser.add_argument('--resume_training', '--resume_training', default=False, type=bool, help='use pretrained model or not')
 
-    save_dir='/model/celebahq/'
+    save_dir='pretrain/celebahq/'
     NUM_CLASSES=[5,3,3,2,2,2,2,2]
     NUM_EPOCH=11
     batch_size=4
@@ -166,16 +170,22 @@ def adv_train(epoch,device,encoder,generator,discriminator,dataloader,optimizerE
 
            optimizerG.zero_grad() 
            mask=mask.to(device) 
-           z,attr_logits_real,attr_logits_fake=encoder(imgs.to(device),attrs.to(device),mask=mask)         
-           
+           if DATASET=='celebahq':
+               z,attr_logits_real,attr_logits_fake=encoder(paired_imgs.to(device),attrs.to(device),mask=mask)     
+           else:
+               z,attr_logits_real,attr_logits_fake=encoder(imgs.to(device),attrs.to(device),mask=mask)     
+               
            gen_x=generator(z)   
            # for fashion datasets, directly copy the face
            gen_x=gen_x*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device)   
-           dis_gen_x,gen_logits= discriminator(gen_x)  #
+           dis_gen_x,gen_logits= discriminator(gen_x)  
            rec_loss=args.l3*torch.abs(gen_x-imgs.to(device)).mean()
            loss_dict['rec_loss']=rec_loss.cpu().item()           
            
-           z_prime,attr_logits_real,attr_logits_fake=encoder(imgs.to(device),paired_attrs.to(device),mask=mask) 
+           if DATASET=='celebahq':
+               z_prime,attr_logits_real,attr_logits_fake=encoder(paired_imgs.to(device),paired_attrs.to(device),mask=mask)
+           else:
+               z_prime,attr_logits_real,attr_logits_fake=encoder(imgs.to(device),paired_attrs.to(device),mask=mask) 
            gen_x_prime=generator(z_prime) 
            # for fashion datasets, directly copy the face
            gen_x_prime=gen_x_prime*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device) 
@@ -187,7 +197,7 @@ def adv_train(epoch,device,encoder,generator,discriminator,dataloader,optimizerE
            loss_dict['attr_fake']=attr_loss.cpu().item()
            
            if DATASET=='celebahq':
-                 p_loss=args.l4*(z-imgs.to(device)).norm()/sum(list(z.size()))+args.l4*(z_prime-imgs.to(device)).norm()/sum(list(z.size()))
+                 p_loss=args.l4*(z-paired_imgs.to(device)).norm()/sum(list(z.size()))+args.l4*(z_prime-paired_imgs.to(device)).norm()/sum(list(z.size()))
            else:
                  p_loss=args.l4*torch.abs(cnn(gen_x_prime)-cnn(paired_imgs.to(device))).mean()+torch.abs(cnn(gen_x)-cnn(imgs.to(device))).mean()
            loss_dict['p_loss']=p_loss.cpu().item()
@@ -258,7 +268,10 @@ def test(device,encoder,generator,discriminator,dataloader,imgfolder='output/'):
       for ibatch,(imgs,attrs,imgname,paired_attrs,face_seg,paired_imgs,mask) in enumerate(dataloader):
          with torch.no_grad(): 
             mask=mask.to(device) 
-            z,_,_=encoder((imgs).to(device),paired_attrs.to(device),mask=mask)           
+            if DATASET=='celebahq':
+                z,_,_=encoder((paired_imgs).to(device),paired_attrs.to(device),mask=mask)           
+            else:
+                z,_,_=encoder((imgs).to(device),paired_attrs.to(device),mask=mask)           
             gen_x=generator(z)
             gen_x=gen_x*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device) 
             loss_dict['rec_loss']=MSELoss(gen_x,imgs.to(device))
@@ -287,7 +300,10 @@ def manipulate(device,encoder,generator,discriminator,dataloader,imgfolder='outp
             #specify the manipulated attribute here
             attrs[:,1]=0 
             mask=mask.to(device) 
-            z,_,_=encoder((imgs).to(device),attrs.to(device),mask=mask)           
+            if DATASET=='celebahq':
+                z,_,_=encoder((paired_imgs).to(device),attrs.to(device),mask=mask)           
+            else:
+                z,_,_=encoder((imgs).to(device),attrs.to(device),mask=mask)           
             gen_x=generator(z)
             gen_x=gen_x*(1-face_seg.to(device))+imgs.to(device)*face_seg.to(device) 
             loss_dict['rec_loss']=MSELoss(gen_x,imgs.to(device))
@@ -306,17 +322,18 @@ def manipulate(device,encoder,generator,discriminator,dataloader,imgfolder='outp
      
 
 train_data=Dataset(split='train')
-test_data=Dataset(split='test')
 val_data=Dataset(split='val')
 
 train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True) 
-test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False) 
 val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False) 
 
 device = torch.device('cuda')
 encoder=Encoder(ngf=32, num_classes=NUM_CLASSES)
 encoder.to(device)
-generator=Generator(ngf=32)
+if DATASET=='celebahq':
+    generator=MyGenerator(ngf=32)
+else:
+    generator=Generator(ngf=32)
 generator.to(device)
 discriminator=Discriminator(ngf=32, num_classes=NUM_CLASSES)
 discriminator.to(device)
@@ -329,8 +346,8 @@ optimizerG=torch.optim.Adam(gen_params,lr=args.lr, betas=(args.beta1, 0.999))
 optimizerD=torch.optim.Adam(dis_params,lr=args.lr, betas=(args.beta1, 0.999))
 print('rough number of parameters:',len(enc_params),len(gen_params),len(dis_params))
 
-pretrain=False
-if pretrain:
+
+if args.resume_training:
     checkpoint = torch.load(os.path.join(save_dir,'model.pth'))
     encoder.load_state_dict(checkpoint['encoder_state_dict'])
     generator.load_state_dict(checkpoint['generator_state_dict'])
@@ -342,7 +359,7 @@ if pretrain:
     batch_size=checkpoint['batch_size']
     #test(device,encoder,generator,discriminator,val_dataloader,imgfolder='celeb/')
     
-#if pretrain:   
+#if args.resume_training:   
 #   manipulate(device,encoder,generator,discriminator,val_dataloader,imgfolder='manip/')
 #   assert 1==0
 

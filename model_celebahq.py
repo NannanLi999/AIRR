@@ -142,7 +142,7 @@ class build_classifier(nn.Module):
             EqualLinear(channels[4]//2, 21),
         )
   
-  def forward(self,x,mask=None):  
+  def forward(self,x):  
     x=self.net(x)
     return x
   
@@ -166,13 +166,15 @@ class Encoder(nn.Module):
           self.num_classes=num_classes
           self.filter=equalized_transform(channels[4])
           self.classifier=build_encoder_classifier()
-          self.embeds=nn.Embedding(sum(num_classes),256,max_norm=200)
-          self.fc=Dense_layer(256,512*2)
+          self.embeds=nn.Embedding(sum(num_classes),128,max_norm=100)#64
+          self.fc=Dense_layer(128,18*512*2)#64
           
-    def forward(self,inputs,attrs,mask=None):
+    def forward(self,inputs,attrs,coef=0,mask=None):
           attr_real_logits=self.classifier(inputs)
           z=self.filter(inputs)
           attr_fake_logits=self.classifier(z)
+          
+          fc_weight=get_weight(self.fc.weight, gain=self.fc.gain, use_wscale=self.fc.use_wscale, lrmul=self.fc.lrmul)
           
           cur_index=0
           attr_feats=[]
@@ -180,23 +182,27 @@ class Encoder(nn.Module):
           for i in range(len(self.num_classes)):
             index=cur_index+attrs[:,i] 
             
-            attr_i=dic[index]#F.linear(dic[index],self.fc.weight)+self.fc.bias/8.0
-            """if i==3:
-               attr_i_wo=F.linear(dic[index-1],self.fc.weight)+self.fc.bias/8.0
-               attr_i=attr_i*0+attr_i_wo*1.0"""
+            
+            attr_i=dic[index]#F.linear(dic[index],fc_weight,bias=self.fc.bias/8.0)#
+            """if i==5:
+               attr_i_wo=F.linear(dic[index-1],fc_weight,bias=self.fc.bias/8.0)
+               attr_i=attr_i*coef+attr_i_wo*(1.0-coef)
+            if i==7:
+               attr_i_wo=F.linear(dic[index-1],fc_weight,bias=self.fc.bias/8.0)
+               attr_i=attr_i*(1.0-coef)+attr_i_wo*coef"""
             attr_feats.append(attr_i)
                          
             cur_index=cur_index+self.num_classes[i]
             
           attr_feats=torch.stack(attr_feats,dim=0).sum(dim=0)   
-          attr_feats=self.fc(attr_feats).view(-1,1,512*2)#attr_feats.view(-1,1,512*2) #       
+          attr_feats=self.fc(attr_feats).view(-1,18,512*2)#attr_feats.view(-1,18,512*2) #       
           mean,std=torch.chunk(attr_feats, chunks=2, dim=2)        
           z=(1+std)*z+mean
         
           return z,attr_real_logits,attr_fake_logits
 
 class MyGenerator(nn.Module):
-    def __init__(self,ngf=16):
+    def __init__(self,ngf=16,num_classes=[17,4]):
           super(MyGenerator,self).__init__()              
          
           self.networkG= Generator(1024, 512, 8)         
@@ -218,7 +224,7 @@ class Discriminator(nn.Module):
           self.build_score_map=build_score_map()
           self.networkD_classifier=build_classifier()
           
-    def forward(self,imgs):
+    def forward(self,imgs,att_masks=None):
         backbone=self.networkD_backbone(imgs)
         score_map=self.build_score_map(backbone)        
         logits=self.networkD_classifier(backbone)                

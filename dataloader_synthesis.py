@@ -12,15 +12,15 @@ import random
 import matplotlib.pyplot as plt
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self,root='/net/cs-nfs/home/grad3/nnli/FashionSynthesisBenchmark/',split='train',cat=0):
+    def __init__(self,root='data/synthesis/',split='train',cat=0):
          # cat is the category index that you want to manipulate. cat=0 means random category and is used in training.
          self.root=root
          self.num_classes=[17,4]
          self.transform=transforms.ToTensor()
 
-         index=pickle.load(open('data/synthesis/index.pkl','rb'))
-         self.imgname_list=[x[0][0] for x in scio.loadmat(self.root+'Img/subset_index.mat')['nameList']]
-         self.n2n=pickle.load(open('data/synthesis/name2pairedname.pkl','rb'))
+         index=pickle.load(open(os.path.join(root,'index.pkl'),'rb'))
+         self.imgname_list=[x[0][0] for x in scio.loadmat(os.path.join(root,'Img/subset_index.mat'))['nameList']]
+         self.n2n=pickle.load(open(os.path.join(root,'name2pairedname.pkl'),'rb'))
          
          if split=='train':
             self.index=index[:-4000]         
@@ -29,8 +29,8 @@ class Dataset(torch.utils.data.Dataset):
          elif split=='test':
             self.index=index[-2000:]           
                
-         self.img_root=root+'Img/'
-         img_file=h5py.File(self.img_root+'G2.h5','r')
+         self.img_root=os.path.join(root,'Img/')
+         img_file=h5py.File(os.path.join(root,'G2.h5'),'r')
          self.img_data_minus_mean=img_file['ih']
          self.img_data_mean=np.array(img_file['ih_mean'])
          self.seg_data=np.array(img_file['b_'])
@@ -40,8 +40,8 @@ class Dataset(torch.utils.data.Dataset):
          name2index={x:i for i,x in enumerate(self.imgname_list)}
         
          
-         anno_root=root+'Anno/'
-         self.anno=scio.loadmat(anno_root+'language_original.mat')
+         anno_root=os.path.join(root,'Anno/')
+         self.anno=scio.loadmat(os.path.join(anno_root,'language_original.mat'))
          self.attr_dict={}
          self.attr_choices=[]
          for i in range(len(self.anno['nameList'])):
