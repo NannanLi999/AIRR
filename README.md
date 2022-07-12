@@ -17,7 +17,7 @@ Download and unzip the pretrained [attribute classifier](https://drive.google.co
 ## Train
 Run `train.py`.
 
-To train on CelebA-HQ, please clone [pSp](https://github.com/eladrich/pixel2style2pixel) repository at the current directory. You also need to download their pretrained image decoder weights for ffhq.
+To train on CelebA-HQ, please clone [pSp](https://github.com/eladrich/pixel2style2pixel) repository to the current directory. You also need to download their pretrained image decoder weights for ffhq.
 
 ## Test
 Run `test.py`. This should generate all test images with the specified attribute under `save_dir`. Please specify `save_dir`, the dataset and the attribute that you would like to manipulate in `test.py`.
