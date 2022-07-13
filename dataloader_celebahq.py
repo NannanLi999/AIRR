@@ -12,9 +12,11 @@ from torchvision import transforms, utils
 
 class Dataset(data.Dataset):
     def __init__(self, root='data/celebahq/', split='train',cat='Smiling'):
-        # cat is the category index that you want to manipulate. 
-        # options for cat: 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair','Bald','Mustache', 'No_Beard', 'Sideburns','Bald_hair_type', 'Straight_Hair', 'Wavy_Hair','No Smiling','Smiling'],
-        #                  'No Eyeglasses','Eyeglasses','No Male','Male','No Wearing_Hat','Wearing_Hat','Old','Young'
+        """
+         cat is the category index that you want to manipulate. 
+         Options for cat: 'Black_Hair', 'Blond_Hair', 'Brown_Hair', 'Gray_Hair','Bald','Mustache', 'No_Beard', 'Sideburns','Bald_hair_type', 'Straight_Hair', 'Wavy_Hair','No Smiling','Smiling','No Eyeglasses','Eyeglasses','No Male','Male','No Wearing_Hat','Wearing_Hat','Old','Young'.
+         For eah category, to evaluate the retrieval rate, we choose images whose manipulated attributes exist in the dataset.  
+        """ 
         self.root=root
         self.split=split
         self.img_dir=os.path.join(root,'CelebAMask-HQ/CelebA-HQ-img')

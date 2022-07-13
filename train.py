@@ -377,5 +377,6 @@ for e in range(start_epoch,NUM_EPOCH):
       adv_train(e,device,encoder,generator,discriminator,train_dataloader,optimizerE,optimizerG,optimizerD,enc_params,gen_params,dis_params)
       if e%5==0:
            torch.save(param_dict,os.path.join(save_dir,'model_%d.pth'%(e)))
+           torch.save(param_dict,os.path.join(save_dir,'model.pth'%(e)))
       test(device,encoder,generator,discriminator,val_dataloader,imgfolder=save_dir)
       
