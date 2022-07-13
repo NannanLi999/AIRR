@@ -140,7 +140,7 @@ def get_attr_loss(logits,labels):
            cur_index+=NUM_CLASSES[i]
        return attr_loss
        
-def get_info_loss(logits,labels):
+def get_disetg_loss(logits,labels):
        cur_index=0
        attr_loss=0
        for i in range(len(NUM_CLASSES)):
@@ -202,9 +202,9 @@ def adv_train(epoch,device,encoder,generator,discriminator,dataloader,optimizerE
                  p_loss=args.l4*torch.abs(cnn(gen_x_prime)-cnn(paired_imgs.to(device))).mean()+torch.abs(cnn(gen_x)-cnn(imgs.to(device))).mean()
            loss_dict['p_loss']=p_loss.cpu().item()
         
-           info_loss=get_attr_loss(attr_logits_real,attrs.to(device))+get_info_loss(attr_logits_fake,attrs.to(device))
-           info_loss=args.l1*info_loss
-           loss_dict['info']=info_loss
+           disetg_loss=get_disetg_loss(attr_logits_real,attrs.to(device))+get_disetg_loss(attr_logits_fake,attrs.to(device))
+           disetg_loss=args.l1*disetg_loss
+           loss_dict['disetg']=disetg_loss
           
 
            (G_cost+rec_loss+attr_loss+info_loss+p_loss).backward()
