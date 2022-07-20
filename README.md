@@ -1,5 +1,5 @@
 # AIRR
-Official code of Supervised Attribute Information Removal and Reconstruction for Image Manipulation
+Official code of Supervised Attribute Information Removal and Reconstruction for Image Manipulation. [[pdf]](https://arxiv.org/abs/2207.06555)
 
 ## Dependencies
 Our code is built on Python3, Pytorch 1.11 and CUDA 11.3. 
